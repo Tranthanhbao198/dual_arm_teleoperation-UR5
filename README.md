@@ -54,7 +54,7 @@ mkdir -p ~/ros2_dual_arm_ws/src
 cd ~/ros2_dual_arm_ws/src
 
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/dual_arm_teleoperation.git
+git clone https://github.com/Tranthanhbao198/dual_arm_teleoperation-UR5.git
 
 # Build
 cd ~/ros2_dual_arm_ws
@@ -209,7 +209,7 @@ Apache License 2.0 - See [LICENSE](LICENSE)
 ## 📧 Contact
 
 **Author**: Thanh Bao  
-**GitHub**: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
+**GitHub**: [@Tranthanhbao198](https://github.com/Tranthanhbao198)
 
 ---
 
