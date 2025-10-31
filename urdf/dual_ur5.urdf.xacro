@@ -1,0 +1,440 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="dual_ur5_robot">
+
+  <xacro:property name="M_PI" value="3.14159265358979323846"/>
+  
+  <!-- UR5 Properties -->
+  <xacro:property name="ur5_d1" value="0.089159" />
+  <xacro:property name="ur5_a2" value="-0.42500" />
+  <xacro:property name="ur5_a3" value="-0.39225" />
+  <xacro:property name="ur5_d4" value="0.10915" />
+  <xacro:property name="ur5_d5" value="0.09465" />
+  <xacro:property name="ur5_d6" value="0.0823" />
+  <xacro:property name="shoulder_offset" value="0.13585" />
+  <xacro:property name="elbow_offset" value="-0.1197" />
+  
+  <!-- Masses -->
+  <xacro:property name="base_mass" value="4.0" />
+  <xacro:property name="shoulder_mass" value="3.7000" />
+  <xacro:property name="upper_arm_mass" value="8.3930" />
+  <xacro:property name="forearm_mass" value="2.2750" />
+  <xacro:property name="wrist_1_mass" value="1.2190" />
+  <xacro:property name="wrist_2_mass" value="1.2190" />
+  <xacro:property name="wrist_3_mass" value="0.1879" />
+  
+  <!-- Materials for coloring arms -->
+  <material name="blue_material">
+    <color rgba="0.2 0.4 0.8 1.0"/>
+  </material>
+  
+  <material name="red_material">
+    <color rgba="0.8 0.2 0.2 1.0"/>
+  </material>
+  
+  <!-- Inertia Macro -->
+  <xacro:macro name="cylinder_inertial" params="radius length mass *origin">
+    <inertial>
+      <mass value="${mass}" />
+      <xacro:insert_block name="origin" />
+      <inertia ixx="${0.0833333 * mass * (3 * radius * radius + length * length)}" ixy="0.0" ixz="0.0"
+        iyy="${0.0833333 * mass * (3 * radius * radius + length * length)}" iyz="0.0"
+        izz="${0.5 * mass * radius * radius}" />
+    </inertial>
+  </xacro:macro>
+
+  <!-- UR5 Robot Macro with color parameter -->
+  <xacro:macro name="ur5_robot" params="prefix joint_limited color_material">
+    
+    <!-- Base Link -->
+    <link name="${prefix}base_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/base.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/base.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.06" length="0.05" mass="${base_mass}">
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Shoulder Pan Joint -->
+    <joint name="${prefix}shoulder_pan_joint" type="revolute">
+      <parent link="${prefix}base_link" />
+      <child link="${prefix}shoulder_link" />
+      <origin xyz="0.0 0.0 ${ur5_d1}" rpy="0.0 0.0 0.0" />
+      <axis xyz="0 0 1" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="150.0" velocity="3.15"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-2.0 * M_PI}" upper="${2.0 * M_PI}" effort="150.0" velocity="3.15"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Shoulder Link -->
+    <link name="${prefix}shoulder_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/shoulder.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/shoulder.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.06" length="0.15" mass="${shoulder_mass}">
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Shoulder Lift Joint -->
+    <joint name="${prefix}shoulder_lift_joint" type="revolute">
+      <parent link="${prefix}shoulder_link" />
+      <child link="${prefix}upper_arm_link" />
+      <origin xyz="0.0 ${shoulder_offset} 0.0" rpy="0.0 ${M_PI / 2.0} 0.0" />
+      <axis xyz="0 1 0" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${0}" effort="150.0" velocity="3.15"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="150.0" velocity="3.15"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Upper Arm Link -->
+    <link name="${prefix}upper_arm_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/upperarm.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/upperarm.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.06" length="0.56" mass="${upper_arm_mass}">
+        <origin xyz="0.0 0.0 0.28" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Elbow Joint -->
+    <joint name="${prefix}elbow_joint" type="revolute">
+      <parent link="${prefix}upper_arm_link" />
+      <child link="${prefix}forearm_link" />
+      <origin xyz="0.0 ${elbow_offset} ${-ur5_a2}" rpy="0.0 0.0 0.0" />
+      <axis xyz="0 1 0" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="150.0" velocity="3.15"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="150.0" velocity="3.15"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Forearm Link -->
+    <link name="${prefix}forearm_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/forearm.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/forearm.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.06" length="0.5" mass="${forearm_mass}">
+        <origin xyz="0.0 0.0 0.25" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Wrist 1 Joint -->
+    <joint name="${prefix}wrist_1_joint" type="revolute">
+      <parent link="${prefix}forearm_link" />
+      <child link="${prefix}wrist_1_link" />
+      <origin xyz="0.0 0.0 ${-ur5_a3}" rpy="0.0 ${M_PI / 2.0} 0.0" />
+      <axis xyz="0 1 0" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-2.0 * M_PI}" upper="${2.0 * M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Wrist 1 Link -->
+    <link name="${prefix}wrist_1_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/wrist1.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/wrist1.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.6" length="0.12" mass="${wrist_1_mass}">
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Wrist 2 Joint -->
+    <joint name="${prefix}wrist_2_joint" type="revolute">
+      <parent link="${prefix}wrist_1_link" />
+      <child link="${prefix}wrist_2_link" />
+      <origin xyz="0.0 ${ur5_d4 - elbow_offset - shoulder_offset} 0.0" rpy="0.0 0.0 0.0" />
+      <axis xyz="0 0 1" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-2.0 * M_PI}" upper="${2.0 * M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Wrist 2 Link -->
+    <link name="${prefix}wrist_2_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/wrist2.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/wrist2.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.6" length="0.12" mass="${wrist_2_mass}">
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- Wrist 3 Joint -->
+    <joint name="${prefix}wrist_3_joint" type="revolute">
+      <parent link="${prefix}wrist_2_link" />
+      <child link="${prefix}wrist_3_link" />
+      <origin xyz="0.0 0.0 ${ur5_d5}" rpy="0.0 0.0 0.0" />
+      <axis xyz="0 1 0" />
+      <xacro:if value="${joint_limited}">
+        <limit lower="${-M_PI}" upper="${M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:if>
+      <xacro:unless value="${joint_limited}">
+        <limit lower="${-2.0 * M_PI}" upper="${2.0 * M_PI}" effort="28.0" velocity="3.2"/>
+      </xacro:unless>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <!-- Wrist 3 Link -->
+    <link name="${prefix}wrist_3_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/visual/wrist3.dae" />
+        </geometry>
+        <material name="${color_material}"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dual_arm_teleoperation/meshes/collision/wrist3.stl" />
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.6" length="0.12" mass="${wrist_3_mass}">
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+      </xacro:cylinder_inertial>
+    </link>
+
+    <!-- End Effector Link -->
+    <joint name="${prefix}ee_fixed_joint" type="fixed">
+      <parent link="${prefix}wrist_3_link" />
+      <child link="${prefix}ee_link" />
+      <origin xyz="0.0 ${ur5_d6} 0.0" rpy="0.0 0.0 ${M_PI/2.0}" />
+    </joint>
+
+    <link name="${prefix}ee_link">
+      <collision>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+        <origin rpy="0 0 0" xyz="-0.01 0 0"/>
+      </collision>
+    </link>
+
+    <!-- Tool0 Frame -->
+    <link name="${prefix}tool0"/>
+    <joint name="${prefix}wrist_3_link-tool0_fixed_joint" type="fixed">
+      <origin xyz="0 ${ur5_d6} 0" rpy="${M_PI/-2.0} 0 0"/>
+      <parent link="${prefix}wrist_3_link"/>
+      <child link="${prefix}tool0"/>
+    </joint>
+
+  </xacro:macro>
+
+  <!-- Gripper Macro -->
+  <xacro:macro name="simple_gripper" params="prefix">
+    <link name="${prefix}gripper_base">
+      <visual>
+        <geometry>
+          <box size="0.05 0.05 0.03"/>
+        </geometry>
+        <material name="DarkGrey">
+          <color rgba="0.3 0.3 0.3 1.0"/>
+        </material>
+        <origin xyz="0 0 0.015" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.05 0.05 0.03"/>
+        </geometry>
+        <origin xyz="0 0 0.015" rpy="0 0 0"/>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <origin xyz="0 0 0.015" rpy="0 0 0"/>
+        <inertia ixx="0.00005" ixy="0.0" ixz="0.0" iyy="0.00005" iyz="0.0" izz="0.00005"/>
+      </inertial>
+    </link>
+    
+    <joint name="${prefix}gripper_base_joint" type="fixed">
+      <parent link="${prefix}tool0"/>
+      <child link="${prefix}gripper_base"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+    
+    <link name="${prefix}gripper_finger1">
+      <visual>
+        <geometry>
+          <box size="0.01 0.02 0.08"/>
+        </geometry>
+        <material name="Green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.01 0.02 0.08"/>
+        </geometry>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      </collision>
+      <inertial>
+        <mass value="0.03"/>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" iyy="0.000005" iyz="0.0" izz="0.000001"/>
+      </inertial>
+    </link>
+    
+    <joint name="${prefix}gripper_joint1" type="prismatic">
+      <parent link="${prefix}gripper_base"/>
+      <child link="${prefix}gripper_finger1"/>
+      <origin xyz="0 0.02 0.03" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0.0" upper="0.04" effort="20" velocity="0.2"/>
+    </joint>
+    
+    <link name="${prefix}gripper_finger2">
+      <visual>
+        <geometry>
+          <box size="0.01 0.02 0.08"/>
+        </geometry>
+        <material name="Green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.01 0.02 0.08"/>
+        </geometry>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      </collision>
+      <inertial>
+        <mass value="0.03"/>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" iyy="0.000005" iyz="0.0" izz="0.000001"/>
+      </inertial>
+    </link>
+    
+    <joint name="${prefix}gripper_joint2" type="prismatic">
+      <parent link="${prefix}gripper_base"/>
+      <child link="${prefix}gripper_finger2"/>
+      <origin xyz="0 -0.02 0.03" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.04" upper="0.0" effort="20" velocity="0.2"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ==================== ASSEMBLE DUAL UR5 ROBOT ==================== -->
+  
+  <!-- World Link -->
+  <link name="world"/>
+  
+  <!-- Base Platform - SMALLER -->
+  <link name="base_platform">
+    <visual>
+      <geometry>
+        <box size="0.6 0.4 0.05"/>
+      </geometry>
+      <material name="Grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.6 0.4 0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="15.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.2"/>
+    </inertial>
+  </link>
+  
+  <joint name="world_to_base" type="fixed">
+    <parent link="world"/>
+    <child link="base_platform"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  
+  <!-- LEFT UR5 Robot - BLUE -->
+  <xacro:ur5_robot prefix="left_" joint_limited="true" color_material="blue_material"/>
+  
+  <joint name="left_platform_mount" type="fixed">
+    <parent link="base_platform"/>
+    <child link="left_base_link"/>
+    <origin xyz="0.2 0 0.025" rpy="0 0 ${-M_PI/2}"/>
+  </joint>
+  
+  <!-- Left Gripper -->
+  <xacro:simple_gripper prefix="left_"/>
+  
+  <!-- RIGHT UR5 Robot - RED -->
+  <xacro:ur5_robot prefix="right_" joint_limited="true" color_material="red_material"/>
+  
+  <joint name="right_platform_mount" type="fixed">
+    <parent link="base_platform"/>
+    <child link="right_base_link"/>
+    <origin xyz="-0.2 0 0.025" rpy="0 0 ${M_PI/2}"/>
+  </joint>
+  
+  <!-- Right Gripper -->
+  <xacro:simple_gripper prefix="right_"/>
+
+</robot>
